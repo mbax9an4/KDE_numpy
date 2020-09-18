@@ -62,7 +62,7 @@ def eval_KDE_matrix(train_set, test_set, sigma, batch_size):
         # import pdb; pdb.set_trace()
 
         # compute the distance between each test example and all train examples 
-        diff_matrix = np.square(test_ex[:, np.newaxis] - train_set)
+        diff_matrix = np.square(test_ex[b:b+batch_size, np.newaxis] - train_set)
 
         # divide the distances by the denominator
         cond_prob_features_norm = np.true_divide(diff_matrix, denom) + norm
