@@ -1,0 +1,94 @@
+Wrote profile results to KDE.py.lprof
+Timer unit: 1e-06 s
+
+Total time: 279.974 s
+File: KDE.py
+Function: eval_KDE at line 8
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+     8                                           @profile
+     9                                           # compute the mean log probability over the test data
+    10                                           def eval_KDE(train_set, test_set, best_sigma):
+    11                                               # compute the constant terms of the likelihood 
+    12         1          6.0      6.0      0.0      denom = -1*2.0*math.pow(best_sigma,2)
+    13         1          2.0      2.0      0.0      norm = -1.0/2 * math.log(2.0*math.pi*math.pow(best_sigma,2))
+    14         1          3.0      3.0      0.0      prior = math.log(1.0/train_set.shape[0])
+    15                                           
+    16                                               # variable to record the mean log prob
+    17         1          0.0      0.0      0.0      mean_log_prob = 0.0
+    18                                               
+    19                                               # for each example in test compute the likelihood - average 
+    20                                               # for test_ex in tqdm(test_set):
+    21     10001      16785.0      1.7      0.0      for test_ex in test_set:
+    22                                                   # import pdb; pdb.set_trace()
+    23                                               
+    24                                                   # compute the squared distance between the test vector and each example in the train matrix
+    25     10000  111404945.0  11140.5     39.8          cond_prob_features = np.square(test_ex - train_set)
+    26                                           
+    27                                                   # divide the distances by the denominator
+    28     10000  131912761.0  13191.3     47.1          cond_prob_features_norm = np.true_divide(cond_prob_features, denom) + norm
+    29                                           
+    30                                                   # add the probabilities over the features
+    31     10000   23862724.0   2386.3      8.5          cond_prob_features = np.sum(cond_prob_features_norm, axis=1)
+    32                                           
+    33     10000      32455.0      3.2      0.0          assert cond_prob_features.shape == (train_set.shape[0], )
+    34                                           
+    35                                                   # add the prior
+    36     10000     102265.0     10.2      0.0          cond_prob_features = cond_prob_features + prior
+    37                                           
+    38     10000     160284.0     16.0      0.1          shift_constant = np.max(cond_prob_features)
+    39                                           
+    40                                                   # raise the values to exp, while shifting the values to ensure no overflow occurs
+    41     10000   12268756.0   1226.9      4.4          likelihoods = np.exp(cond_prob_features - shift_constant)
+    42                                           
+    43     10000     197082.0     19.7      0.1          mean_log_prob += math.log(np.sum(likelihoods)) + shift_constant
+    44                                                   
+    45     10000      16424.0      1.6      0.0          assert mean_log_prob < math.inf
+    46                                           
+    47         1          2.0      2.0      0.0      return mean_log_prob/test_set.shape[0]
+
+Total time: 418.951 s
+File: KDE.py
+Function: eval_KDE_matrix at line 49
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+    49                                           @profile
+    50                                           def eval_KDE_matrix(train_set, test_set, best_sigma, batch_size):
+    51                                               # compute the constant terms of the likelihood 
+    52         1          5.0      5.0      0.0      denom = -1*2.0*math.pow(best_sigma,2)
+    53         1          2.0      2.0      0.0      norm = -1.0/2 * math.log(2.0*math.pi*math.pow(best_sigma,2))
+    54         1          2.0      2.0      0.0      prior = math.log(1.0/train_set.shape[0])
+    55                                           
+    56                                               # variable to record the mean log probability over the given dataset
+    57         1          1.0      1.0      0.0      mean_log_prob = 0.0
+    58                                           
+    59      2001       2239.0      1.1      0.0      for b in range(0, test_set.shape[0], batch_size):
+    60                                                   # import pdb; pdb.set_trace()
+    61                                           
+    62                                                   # compute the distance between each test example and all train examples 
+    63      2000  231495652.0 115747.8     55.3          diff_matrix = np.array([np.square(test_ex - train_set) for test_ex in test_set[b:b+batch_size]])
+    64                                           
+    65                                                   # divide the distances by the denominator
+    66      2000  162293436.0  81146.7     38.7          cond_prob_features_norm = np.true_divide(diff_matrix, denom) + norm
+    67                                           
+    68                                                   # add the probabilities over the features
+    69      2000   23181141.0  11590.6      5.5          cond_prob_features = np.sum(cond_prob_features_norm, axis=2)
+    70                                           
+    71      2000       7560.0      3.8      0.0          assert cond_prob_features.shape == (batch_size, train_set.shape[0], )
+    72                                           
+    73                                                   # add the prior
+    74      2000      54426.0     27.2      0.0          cond_prob_features = cond_prob_features + prior
+    75                                           
+    76                                                   # find the maximum value at each test example
+    77      2000     352733.0    176.4      0.1          shift_constant = np.array([np.ones(train_set.shape[0])*np.max(e) for e in cond_prob_features])
+    78                                           
+    79                                                   # raise the values to exp, while shifting the values to ensure no overflow occurs
+    80      2000    1466003.0    733.0      0.3          likelihoods = np.exp(cond_prob_features - shift_constant)
+    81                                           
+    82      2000      81080.0     40.5      0.0          log_probs = np.add(np.log(np.sum(likelihoods, axis=1)), shift_constant[:,0])
+    83                                           
+    84      2000      16848.0      8.4      0.0          mean_log_prob += np.sum(log_probs)
+    85                                           
+    86         1          3.0      3.0      0.0      return mean_log_prob/test_set.shape[0]
