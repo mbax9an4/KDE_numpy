@@ -1,8 +1,10 @@
 {
-    "rand_seed": 2,
+    "search_sigma":0,
+    "rand_seed": [1,10,20,30,40],
     "n_samples":20000,
-    "dset_name": "mnist",
-    "sigma_grid": [0.01, 0.05, 0.08, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0],
+    "best_sigma":0.2,
+    "dset_name": "cifar",
+    "sigma_grid": [0.01, 0.03, 0.05, 0.08, 0.1, 0.2, 0.5, 0.8, 1.0, 1.2, 1.5, 1.7, 2.0],
     "sample_indices": 1,
     "batch_size": 5
 }

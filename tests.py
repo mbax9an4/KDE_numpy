@@ -6,67 +6,59 @@ import json
 import time
 from sklearn.neighbors import KernelDensity
 
-def validate_result():
-    with open("config.json", "r") as f:
-        config = json.load(f)
+# build and fit a Gaussian KDE implemented in sklearn using the specified algorithm
+def sklearn_KDE(train_set, test_set, algorithm, sigma):
+    KDE_sklearn = KernelDensity(bandwidth=sigma, algorithm=algorithm)
+    KDE_sklearn.fit(train_set)
+    log_sklearn = KDE_sklearn.score(test_set)
+    return log_sklearn/test_set.shape[0]
 
-    for r in [2, 10, 20]:
-        rand_seed = r
+# verify that the mean log probbaility computed with my method is similar to that computed using sklearn (checking against both algorithms implemented)
+def validate_result(config):
+    eval_metrics = {
+        'kd_tree':[],
+        'ball_tree':[],
+        'mine':[]}
+
+    for r in [1, 10, 20]:
         config['rand_seed'] = r
 
-        # set the python and numpy seeds
-        random.seed(rand_seed)
-        np.random.seed(rand_seed)
+        # load the dataset specified in the config file, this is where the seeds for numpy and python are also set
+        if config['dset_name'] == "mnist":
+            train_set, valid_set, test_set = load_mnist(config)
+        elif "cifar" in config['dset_name']: 
+            train_set, valid_set, test_set = load_cifar(config)
 
-        config['dset_name'] = "mnist"
-        # load the mnist data
-        train_set, valid_set, test_set = load_mnist(config)
-        test_set = test_set[:2000]
+        # evaluate the sklearn KDE implementation with the two algorithms implemented
+        for algorithm in ['kd_tree', 'ball_tree']:
+            start = time.time()
+            mlp = sklearn_KDE(train_set, test_set, algorithm, config['best_sigma'])
+            end = time.time()
 
+            # record the mean log prob computed by the method and the time it took to run
+            eval_metrics[algorithm].append((mlp, end-start))
+        
+        # evaluate my method as well
         start = time.time()
-        KDE_sklearn = KernelDensity(bandwidth=1)
-        KDE_sklearn.fit(train_set)
-        log_sklearn = KDE_sklearn.score(test_set)
+        mlp = eval_KDE(train_set, test_set, config['best_sigma'])
         end = time.time()
-        print(f'with a random seed of {r} the sklearn mean log prob on mnist is {log_sklearn/test_set.shape[0]} and it took {end-start}s')
-        # print('sklearn mean log prob -740.8322056334938')
 
-        best_sigma = 1
-        start = time.time()
-        mean_log_prob = eval_KDE(train_set, test_set, best_sigma)
-        end = time.time()
-        print(f'with a random seed of {r} my mean log prob on mnist is {mean_log_prob} and it took {end-start}s')
+        # record the mean log prob computed by the method and the time it took to run
+        eval_metrics['mine'].append((mlp, end-start))
 
-        start = time.time()
-        mean_log_prob = eval_KDE_matrix(train_set, test_set, best_sigma, config['batch_size'])
-        end = time.time()
-        print(f'with a random seed of {r} my matrix mean log prob on mnist is {mean_log_prob} and it took {end-start}s')
+    # report the results
+    print(f"The average mean log probability on the {config['dset_name']} dataset, computed using the sklearn (kd_tree) implementation was {np.mean([i[0] for i in eval_metrics['kd_tree']])} (+/-{np.std([i[0] for i in eval_metrics['kd_tree']])}) and it took on average {np.mean([i[1] for i in eval_metrics['kd_tree']])} (+/-{np.std([i[1] for i in eval_metrics['kd_tree']])}) seconds to run.")
 
+    print(f"The average mean log probability on the {config['dset_name']} dataset, computed using the sklearn (ball_tree) implementation was {np.mean([i[0] for i in eval_metrics['ball_tree']])} (+/-{np.std([i[0] for i in eval_metrics['ball_tree']])}) and it took on average {np.mean([i[1] for i in eval_metrics['ball_tree']])} (+/-{np.std([i[1] for i in eval_metrics['ball_tree']])}) seconds to run.")
 
-        config['dset_name'] = "cifar"
-        # load the mnist data
-        train_set, valid_set, test_set = load_cifar(config)
-        test_set = test_set[:2000]
-
-        start = time.time()
-        KDE_sklearn = KernelDensity(bandwidth=1)
-        KDE_sklearn.fit(train_set)
-        log_sklearn = KDE_sklearn.score(test_set)
-        end = time.time()
-        print(f'with a random seed of {r} the sklearn mean log prob on cifar is {log_sklearn/test_set.shape[0]} and it took {end-start}s')
-        # print('sklearn mean log prob -2868.813658031753')
-
-        best_sigma = 1
-        start = time.time()
-        mean_log_prob = eval_KDE(train_set, test_set, best_sigma)
-        end = time.time()
-        print(f'with a random seed of {r} my mean log prob on cifar is {mean_log_prob} and it took {end-start}s') 
-
-        start = time.time()
-        mean_log_prob = eval_KDE_matrix(train_set, test_set, best_sigma, config['batch_size'])
-        end = time.time()
-        print(f'with a random seed of {r} my matrix mean log prob on cifar is {mean_log_prob} and it took {end-start}s')
+    print(f"The average mean log probability on the {config['dset_name']} dataset, computed using my implementation was {np.mean([i[0] for i in eval_metrics['mine']])} (+/-{np.std([i[0] for i in eval_metrics['mine']])}) and it took on average {np.mean([i[1] for i in eval_metrics['mine']])} (+/-{np.std([i[1] for i in eval_metrics['mine']])}) seconds to run.")
 
 
 if __name__ == "__main__":
-    validate_result()
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    
+    # validate the results on both datasets
+    for dset_name in ['mnist', 'cifar']:
+        config['dset_name'] = dset_name
+        validate_result(config)

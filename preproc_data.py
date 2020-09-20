@@ -35,7 +35,7 @@ def load_cifar(config):
 
 def load_indices_file(config, train_set):
     # save the indices for reproducibility, as samples can differ depending on hardware
-    with open(f"{config['dset_name']}_indices.txt", 'r') as f:
+    with open(f"{config['dset_name']}_indices_{config['random_seed']}.txt", 'r') as f:
         indices = np.loadtxt(f, dtype=int)
 
     train_data = np.array(train_set, dtype=np.float32)[indices[:int(config['n_samples']/2)]]
@@ -63,7 +63,7 @@ def get_train_val(config, train_set):
     indices = random.sample(range(0,n_examples), config['n_samples'])
 
     # save the indices for reproducibility, as samples can differ depending on hardware
-    with open(f"{config['dset_name']}_indices.txt", 'w') as f:
+    with open(f"{config['dset_name']}_indices_{rand_seed}.txt", 'w') as f:
         np.savetxt(f, indices)
 
     train_data = np.array(train_set, dtype=np.float32)[indices[:int(config['n_samples']/2)]]
